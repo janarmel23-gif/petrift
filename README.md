@@ -28,8 +28,7 @@ It runs on PC with League-of-Legends style mouse controls, and on tablets and ph
 
 **Accounts and data**
 - Email and password sign in and registration with validation and password strength
-- Google and Discord OAuth when enabled in your Supabase project
-- Guest mode that keeps progress in local storage when Supabase is not configured
+- Guest play without an account (progress stays on that device)
 - Profiles, currencies, hero and skin unlocks, per-hero mastery, loadouts, settings sync, match history and a leaderboard
 
 ---
@@ -64,7 +63,7 @@ npm run preview
 
 1. Create a project at https://supabase.com.
 2. In the dashboard open **SQL Editor**, paste the contents of `supabase/schema.sql` and run it. This creates the tables, row level security policies, the new-user trigger, the `record_match` and `purchase_content` functions and the leaderboard view.
-3. In **Authentication → Providers**, enable Email. Enable Google and Discord if you want the social buttons to work.
+3. In **Authentication → Sign In / Providers**, make sure **Email** is enabled. It is the only sign-in method the game uses.
 4. Copy `.env.example` to `.env` and fill in the two values from **Project Settings → API**:
 
 ```
@@ -74,7 +73,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-public-key
 
 5. Restart the dev server.
 
-If `.env` is missing the game still runs: accounts, unlocks and match history fall back to local storage on the device, and the sign-in screen says so.
+If `.env` is missing, registration and sign-in are disabled and only guest play works. Guest progress is stored in the browser on that device.
 
 The static content catalogue (heroes, abilities, skins, items, the map) lives in code under `src/game/data` so matches run with no network round trips. Supabase stores player state only: profiles, settings, unlocks, mastery, loadouts, matches and match players.
 

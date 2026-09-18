@@ -67,10 +67,9 @@ export const auth = {
 
   async register(email: string, password: string, username: string): Promise<AuthResult> {
     if (!isSupabaseConfigured || !supabase) {
-      localVault.create(username.trim());
-      localStorage.setItem(GUEST_FLAG, '1');
-      return { ok: true, message: 'Offline account created. Connect Supabase to sync across devices.' };
+      return { ok: false, message: 'Accounts are unavailable because the game server is not connected. Play as guest instead.' };
     }
+    localStorage.removeItem(GUEST_FLAG);
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
@@ -85,14 +84,11 @@ export const auth = {
 
   async login(email: string, password: string): Promise<AuthResult> {
     if (!isSupabaseConfigured || !supabase) {
-      if (!localVault.exists()) {
-        return { ok: false, message: 'No offline account yet. Create one from the Register tab.' };
-      }
-      localStorage.setItem(GUEST_FLAG, '1');
-      return { ok: true, message: 'Signed in offline.' };
+      return { ok: false, message: 'Sign in is unavailable because the game server is not connected. Play as guest instead.' };
     }
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     if (error) return { ok: false, message: humanize(error.message) };
+    localStorage.removeItem(GUEST_FLAG);
     return { ok: true, message: 'Welcome back, summoner.' };
   },
 
@@ -111,18 +107,6 @@ export const auth = {
     });
     if (error) return { ok: false, message: humanize(error.message) };
     return { ok: true, message: 'Reset link sent. Check your email.' };
-  },
-
-  async signInWithProvider(provider: 'google' | 'discord'): Promise<AuthResult> {
-    if (!isSupabaseConfigured || !supabase) {
-      return { ok: false, message: 'Social sign-in needs Supabase configured.' };
-    }
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: appUrl() }
-    });
-    if (error) return { ok: false, message: humanize(error.message) };
-    return { ok: true, message: 'Redirecting...' };
   },
 
   async logout(): Promise<void> {

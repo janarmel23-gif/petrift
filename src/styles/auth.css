@@ -272,17 +272,6 @@ label.invalid input {
   background: var(--line);
 }
 
-.auth-alt {
-  display: grid;
-  gap: 10px;
-}
-
-.social-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
 .auth-status {
   margin: 14px 0 0;
   min-height: 20px;

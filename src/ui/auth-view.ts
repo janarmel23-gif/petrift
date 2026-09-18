@@ -77,19 +77,13 @@ export function renderAuthView(root: HTMLElement, onAuthed: () => void) {
           </form>
 
           <div class="auth-divider"><span>or</span></div>
-          <div class="auth-alt">
-            <button class="btn ghost wide" data-action="guest">Play as guest on this device</button>
-            <div class="social-row">
-              <button class="btn ghost" data-action="google">Google</button>
-              <button class="btn ghost" data-action="discord">Discord</button>
-            </div>
-          </div>
+          <button class="btn ghost wide" data-action="guest">Play as guest</button>
 
           <p class="auth-status" data-status></p>
           <p class="auth-note">${
             isSupabaseConfigured
-              ? 'Accounts, progress and match history sync through Supabase.'
-              : 'Supabase is not configured yet, so accounts stay on this device. Add your keys to .env to sync.'
+              ? 'Create an account to save your progress online. Guest progress stays on this device only.'
+              : 'The game server is not connected, so only guest play is available. Add the Supabase keys to enable accounts.'
           }</p>
         </section>
       </div>
@@ -150,7 +144,7 @@ export function renderAuthView(root: HTMLElement, onAuthed: () => void) {
     e.preventDefault();
     const email = (loginForm.email as HTMLInputElement).value;
     const password = (loginForm.password as HTMLInputElement).value;
-    const emailError = isSupabaseConfigured ? validateEmail(email) : null;
+    const emailError = validateEmail(email);
     showFieldError(loginForm, 'email', emailError);
     showFieldError(loginForm, 'password', password.length === 0 ? 'Enter your password.' : null);
     if (emailError || password.length === 0) return;
@@ -172,7 +166,7 @@ export function renderAuthView(root: HTMLElement, onAuthed: () => void) {
     const terms = (registerForm.terms as HTMLInputElement).checked;
 
     const usernameError = validateUsername(username);
-    const emailError = isSupabaseConfigured ? validateEmail(email) : null;
+    const emailError = validateEmail(email);
     const passwordError = validatePassword(password);
     const confirmError = password !== confirm ? 'Passwords do not match.' : null;
 
@@ -208,16 +202,6 @@ export function renderAuthView(root: HTMLElement, onAuthed: () => void) {
     const result = await auth.playAsGuest('Guest' + Math.floor(Math.random() * 900 + 100));
     setStatus(result.message, 'ok');
     if (result.ok) onAuthed();
-  });
-
-  root.querySelector('[data-action="google"]')?.addEventListener('click', async () => {
-    const result = await auth.signInWithProvider('google');
-    setStatus(result.message, result.ok ? 'info' : 'err');
-  });
-
-  root.querySelector('[data-action="discord"]')?.addEventListener('click', async () => {
-    const result = await auth.signInWithProvider('discord');
-    setStatus(result.message, result.ok ? 'info' : 'err');
   });
 
   renderRoster(root.querySelector<HTMLElement>('[data-roster]')!);
