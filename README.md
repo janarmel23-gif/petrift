@@ -92,21 +92,16 @@ Once installed it launches fullscreen in landscape and works offline for everyth
 
 ---
 
-## Deploying to GitHub and hosting
+## Deploying to GitHub Pages
 
-```bash
-git init
-```
+The workflow in `.github/workflows/deploy.yml` builds and publishes the game on every push to `main`.
 
-```bash
-git add -A && git commit -m "PetRift: pet MOBA with Supabase backend"
-```
+1. **Settings → Pages**: set **Source** to **GitHub Actions**.
+2. **Settings → Secrets and variables → Actions**: add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. If either is missing, the run shows a "Supabase not connected" warning and the site runs in offline guest mode.
+3. Push to `main`, or run **Actions → Deploy to GitHub Pages → Run workflow**.
+4. In Supabase **Authentication → URL Configuration**, add `https://<you>.github.io/<repo>/**` to **Redirect URLs** so confirmation and password-reset emails land on the game.
 
-```bash
-git branch -M main && git remote add origin https://github.com/<you>/<repo>.git && git push -u origin main
-```
-
-`vite.config.ts` uses `base: './'`, so the built `dist/` folder works from any path. For **GitHub Pages**, publish `dist/`. For **Vercel** or **Netlify**, set the build command to `npm run build`, the output directory to `dist`, and add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables.
+The site is served at `https://<you>.github.io/<repo>/`. `vite.config.ts` uses `base: './'`, so the same `dist/` also works on Vercel or Netlify (build command `npm run build`, output `dist`, with the two variables set as environment variables).
 
 A service worker caches the app shell, so after deploying an update players get an in-app "new version ready" prompt.
 

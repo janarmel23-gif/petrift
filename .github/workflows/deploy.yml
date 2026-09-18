@@ -27,6 +27,17 @@ jobs:
 
       - run: npm ci
 
+      - name: Check Supabase secrets
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$VITE_SUPABASE_URL" ] || [ -z "$VITE_SUPABASE_ANON_KEY" ]; then
+            echo "::warning title=Supabase not connected::Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY under Settings > Secrets and variables > Actions. Until then the site runs in offline guest mode and sign-ups are not saved to Supabase."
+          else
+            echo "Supabase secrets found. Accounts will be saved to $VITE_SUPABASE_URL"
+          fi
+
       - run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
