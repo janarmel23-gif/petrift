@@ -1,11 +1,11 @@
 import { angleTo, clamp, dist, TAU, type Point } from '../core/math';
-import { BLUE_BASE, RED_BASE, WORLD_SIZE } from '../data/map';
+import { BLUE_BASE, RED_BASE, STRUCTURES } from '../data/map';
 import type { SkillDef } from '../data/types';
 import type { Unit } from '../sim/unit';
 import type { World } from '../sim/world';
 import { Camera } from './camera';
 import { drawPet } from './pets';
-import { terrainCanvas, terrainDetail } from './terrain';
+import { TerrainChunks, terrainDetail } from './terrain';
 
 const TEAM_COLOR: Record<string, string> = {
   blue: '#4fb3ff',
@@ -29,6 +29,9 @@ export class Renderer {
   private fog: HTMLCanvasElement;
   private fogCtx: CanvasRenderingContext2D;
   private dpr = 1;
+  private lowPower = false;
+  private terrain = new TerrainChunks();
+  private braziers: Array<{ x: number; y: number; seed: number }> = [];
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -37,10 +40,22 @@ export class Renderer {
     this.ctx = ctx;
     this.fog = document.createElement('canvas');
     this.fogCtx = this.fog.getContext('2d')!;
+    for (const base of [BLUE_BASE, RED_BASE]) {
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * TAU + 0.31;
+        this.braziers.push({ x: base.x + Math.cos(a) * 1330, y: base.y + Math.sin(a) * 1330, seed: i * 2.7 + base.x * 0.001 });
+      }
+    }
+    for (const s of STRUCTURES) {
+      if (s.kind !== 'inhibitor') continue;
+      this.braziers.push({ x: s.pos.x - 170, y: s.pos.y + 40, seed: s.pos.x * 0.01 });
+      this.braziers.push({ x: s.pos.x + 170, y: s.pos.y + 40, seed: s.pos.y * 0.01 });
+    }
   }
 
   resize(width: number, height: number, dpr: number, mode: 'desktop' | 'tablet' | 'mobile') {
     this.dpr = dpr;
+    this.lowPower = mode !== 'desktop';
     this.canvas.width = Math.floor(width * dpr);
     this.canvas.height = Math.floor(height * dpr);
     this.canvas.style.width = `${width}px`;
@@ -67,6 +82,7 @@ export class Renderer {
     this.drawZones(world);
     if (targeting) this.drawTargeting(world, targeting);
     this.drawWards(world);
+    this.drawBraziers(world);
     this.drawStructures(world);
     this.drawEffectsBelow(world);
     this.drawUnits(world, hoverId);
@@ -87,12 +103,16 @@ export class Renderer {
     ctx.restore();
   }
 
+  destroy() {
+    this.terrain.destroy();
+  }
+
   private drawTerrain(world: World) {
     const ctx = this.ctx;
     const cam = this.camera;
-    const img = terrainCanvas(this.quality);
-    ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(img, 0, 0, WORLD_SIZE, WORLD_SIZE);
+    this.terrain.configure(this.quality, this.lowPower);
+    this.terrain.update(cam.viewLeft, cam.viewTop, cam.viewWidth, cam.viewHeight, this.lowPower ? 5 : 8);
+    this.terrain.draw(ctx, cam.viewLeft, cam.viewTop, cam.viewWidth, cam.viewHeight);
     if (this.quality !== 'low') terrainDetail(ctx, cam.viewLeft, cam.viewTop, cam.viewWidth, cam.viewHeight, world.time);
   }
 
@@ -104,12 +124,77 @@ export class Renderer {
     ] as Array<[Point, string]>) {
       if (!this.camera.isVisible(base.x, base.y, 1600)) continue;
       const g = ctx.createRadialGradient(base.x, base.y, 100, base.x, base.y, 1500);
-      g.addColorStop(0, `${color}33`);
+      g.addColorStop(0, `${color}1c`);
       g.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = g;
       ctx.beginPath();
       ctx.arc(base.x, base.y, 1500, 0, TAU);
       ctx.fill();
+    }
+  }
+
+  private drawBraziers(world: World) {
+    const ctx = this.ctx;
+    const t = world.time;
+    for (const b of this.braziers) {
+      if (!this.camera.isVisible(b.x, b.y, 260)) continue;
+      const flicker = 1 + Math.sin(t * 9 + b.seed) * 0.08 + Math.sin(t * 13.7 + b.seed * 2) * 0.05;
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const glow = ctx.createRadialGradient(b.x, b.y - 30, 10, b.x, b.y - 30, 230 * flicker);
+      glow.addColorStop(0, 'rgba(255,170,80,0.3)');
+      glow.addColorStop(0.5, 'rgba(255,120,40,0.1)');
+      glow.addColorStop(1, 'rgba(255,90,20,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y - 30, 230 * flicker, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(b.x + 8, b.y + 10, 40, 16, 0, 0, TAU);
+      ctx.fill();
+
+      const stone = ctx.createLinearGradient(b.x - 28, 0, b.x + 28, 0);
+      stone.addColorStop(0, '#6d6a60');
+      stone.addColorStop(0.5, '#4a4840');
+      stone.addColorStop(1, '#2e2d28');
+      ctx.fillStyle = stone;
+      ctx.beginPath();
+      ctx.moveTo(b.x - 22, b.y + 6);
+      ctx.lineTo(b.x - 15, b.y - 34);
+      ctx.lineTo(b.x + 15, b.y - 34);
+      ctx.lineTo(b.x + 22, b.y + 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#3a3730';
+      ctx.beginPath();
+      ctx.ellipse(b.x, b.y - 36, 28, 10, 0, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = '#ffb04a';
+      ctx.beginPath();
+      ctx.ellipse(b.x, b.y - 38, 20, 6, 0, 0, TAU);
+      ctx.fill();
+
+      for (const [w, h, c0, c1] of [
+        [22, 70, 'rgba(255,120,30,0.95)', 'rgba(200,40,10,0)'],
+        [13, 46, 'rgba(255,236,160,1)', 'rgba(255,160,50,0)']
+      ] as Array<[number, number, string, string]>) {
+        const hh = h * flicker;
+        const sway = Math.sin(t * 6 + b.seed) * 4;
+        const g = ctx.createLinearGradient(0, b.y - 38, 0, b.y - 38 - hh);
+        g.addColorStop(0, c0);
+        g.addColorStop(1, c1);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(b.x - w, b.y - 38);
+        ctx.quadraticCurveTo(b.x - w * 0.9, b.y - 38 - hh * 0.55, b.x + sway, b.y - 38 - hh);
+        ctx.quadraticCurveTo(b.x + w * 0.9, b.y - 38 - hh * 0.55, b.x + w, b.y - 38);
+        ctx.closePath();
+        ctx.fill();
+      }
     }
   }
 

@@ -1,34 +1,8 @@
 import { TAU, clamp } from '../core/math';
-import { GRID, TERRAIN_BASE, TERRAIN_BRUSH, TERRAIN_GROUND, TERRAIN_RIVER, TERRAIN_WALL, WORLD_SIZE, terrain } from '../data/map';
+import { WORLD_SIZE } from '../data/map';
 import type { World } from '../sim/world';
 import type { Camera } from './camera';
-
-let base: HTMLCanvasElement | null = null;
-
-function buildBase(size: number): HTMLCanvasElement {
-  if (base && base.width === size) return base;
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d')!;
-  const grid = terrain();
-  const cell = size / GRID;
-  const colors: Record<number, string> = {
-    [TERRAIN_WALL]: '#0a1712',
-    [TERRAIN_GROUND]: '#2c5f3d',
-    [TERRAIN_BRUSH]: '#1c4529',
-    [TERRAIN_RIVER]: '#1d5570',
-    [TERRAIN_BASE]: '#3a5878'
-  };
-  for (let gy = 0; gy < GRID; gy++) {
-    for (let gx = 0; gx < GRID; gx++) {
-      ctx.fillStyle = colors[grid[gy * GRID + gx]] ?? colors[TERRAIN_WALL];
-      ctx.fillRect(gx * cell, gy * cell, cell + 0.6, cell + 0.6);
-    }
-  }
-  base = canvas;
-  return canvas;
-}
+import { terrainCanvas } from './terrain';
 
 export function drawMinimap(canvas: HTMLCanvasElement, world: World, camera: Camera, showAllHeroes: boolean, pings: Array<{ x: number; y: number; at: number }>) {
   const ctx = canvas.getContext('2d');
@@ -37,7 +11,8 @@ export function drawMinimap(canvas: HTMLCanvasElement, world: World, camera: Cam
   const scale = size / WORLD_SIZE;
 
   ctx.clearRect(0, 0, size, size);
-  ctx.drawImage(buildBase(Math.min(320, size)), 0, 0, size, size);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(terrainCanvas(), 0, 0, size, size);
 
   ctx.globalAlpha = 0.35;
   ctx.fillStyle = '#03060c';

@@ -4,7 +4,6 @@ import { findPath } from './core/pathfinding';
 import { ITEM_BY_ID } from './data/items';
 import { WORLD_SIZE } from './data/map';
 import { Renderer, type TargetingPreview } from './render/renderer';
-import { invalidateTerrain } from './render/terrain';
 import { Hud } from './ui/hud';
 import type { Unit } from './sim/unit';
 import { World, type MatchConfig } from './sim/world';
@@ -43,6 +42,15 @@ export class GameController {
   private resultShown = false;
   private resizeObserver: ResizeObserver | null = null;
   private onResize = () => this.resize();
+  private pointerInWindow = false;
+  private onWindowPointerMove = (e: PointerEvent) => {
+    const rect = this.canvas.getBoundingClientRect();
+    this.cursor = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    this.pointerInWindow = true;
+  };
+  private onPointerLeaveWindow = () => {
+    this.pointerInWindow = false;
+  };
 
   constructor(container: HTMLElement, config: MatchConfig, settings: GameSettings, hooks: GameHooks) {
     this.container = container;
@@ -85,7 +93,6 @@ export class GameController {
         (this.settings as unknown as Record<string, unknown>)[key as string] = value;
         if (key === 'graphics_quality') {
           this.renderer.quality = value as GameSettings['graphics_quality'];
-          invalidateTerrain();
         }
         if (key === 'camera_locked') this.renderer.camera.locked = Boolean(value);
         this.hooks.onSettingChange(this.settings);
@@ -100,6 +107,9 @@ export class GameController {
 
     window.addEventListener('resize', this.onResize);
     window.addEventListener('orientationchange', this.onResize);
+    window.addEventListener('pointermove', this.onWindowPointerMove);
+    document.documentElement.addEventListener('pointerleave', this.onPointerLeaveWindow);
+    window.addEventListener('blur', this.onPointerLeaveWindow);
     if ('ResizeObserver' in window) {
       this.resizeObserver = new ResizeObserver(() => this.resize());
       this.resizeObserver.observe(container);
@@ -122,8 +132,12 @@ export class GameController {
     this.stop();
     this.input.destroy();
     this.hud.destroy();
+    this.renderer.destroy();
     window.removeEventListener('resize', this.onResize);
     window.removeEventListener('orientationchange', this.onResize);
+    window.removeEventListener('pointermove', this.onWindowPointerMove);
+    document.documentElement.removeEventListener('pointerleave', this.onPointerLeaveWindow);
+    window.removeEventListener('blur', this.onPointerLeaveWindow);
     this.resizeObserver?.disconnect();
     this.container.innerHTML = '';
   }
@@ -216,7 +230,7 @@ export class GameController {
     const p = this.world.player;
     if (cam.locked && p) cam.setTarget({ x: p.x, y: p.y });
 
-    if (this.device === 'desktop' && !cam.locked) {
+    if (this.device === 'desktop' && !cam.locked && this.pointerInWindow) {
       const edge = 26;
       const speed = 1400 * dt;
       if (this.cursor.x < edge) cam.nudge(-speed, 0);
