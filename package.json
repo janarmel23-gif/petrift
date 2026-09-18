@@ -1,0 +1,22 @@
+{
+  "name": "petrift",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "PetRift - a modern 5v5 MOBA where every champion is a pet.",
+  "scripts": {
+    "dev": "node scripts/gen-icons.mjs && vite",
+    "build": "node scripts/gen-icons.mjs && tsc --noEmit && vite build",
+    "preview": "vite preview --host",
+    "icons": "node scripts/gen-icons.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8",
+    "vite-plugin-pwa": "^0.20.5"
+  }
+}
